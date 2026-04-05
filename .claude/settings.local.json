@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "WebFetch(domain:bags.fm)",
+      "WebFetch(domain:docs.bags.fm)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:docs.bitquery.io)",
+      "WebFetch(domain:www.helius.dev)",
+      "Bash(npm install:*)",
+      "Bash(grep -l \"chat\\\\|completions\\\\|OpenAI\" /c/Users/Pc/Documents/project101/node_modules/openai/*.d.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s -X POST \"https://public-api-v2.bags.fm/api/v1/token-launch/creator/v3?wallet=9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\" -H \"x-api-key: bags_prod_h0cSdRQhKwXePm6NqI5R-VTfyRK2VEJhlAMK9cqCN44\")",
+      "Bash(curl -s \"https://api.helius.xyz/v0/addresses/9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM/transactions?api-key=bced755e-f559-4a04-ace6-d4f2967647a3&limit=3&type=SWAP\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/roast -H \"Content-Type: application/json\" -d '{\"wallet\":\"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\"}')",
+      "Bash(curl -s \"https://api.helius.xyz/v0/addresses/9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM/transactions?api-key=bced755e-f559-4a04-ace6-d4f2967647a3&limit=5\")",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{\"model\":\"qwen/qwen3-235b-a22b:free\",\"messages\":[{\"role\":\"user\",\"content\":\"say hi\"}],\"max_tokens\":20}')",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{\"model\":\"qwen/qwen3.5-235b-a22b:free\",\"messages\":[{\"role\":\"user\",\"content\":\"say hi in one word\"}],\"max_tokens\":10}')",
+      "Bash(curl -s https://openrouter.ai/api/v1/models -H 'Authorization: Bearer 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')",
+      "Bash(curl -s -X POST http://localhost:3000/api/roast -H 'Content-Type: application/json' -d '{\"wallet\":\"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\"}')",
+      "Bash(curl -s -X POST http://localhost:3002/api/roast -H 'Content-Type: application/json' -d '{\"wallet\":\"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\"}')",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{\"model\":\"qwen/qwen3.6-plus:free\",\"messages\":[{\"role\":\"user\",\"content\":\"say hi in one word\"}],\"max_tokens\":10}')",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['choices'][0]['message']['content']\\)\")",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{\"model\":\"qwen/qwen3.6-plus:free\",\"messages\":[{\"role\":\"user\",\"content\":\"You are a crypto roast comedian. Wallet 9WzDXw had 2.5 SOL, 50 txns, traded FIDA. Write a 80-word roast. End with: DEGEN_SCORE: 55\"}],\"max_tokens\":700}')",
+      "Bash(curl -s https://openrouter.ai/api/v1/chat/completions -H 'Authorization: Bearer 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' -H 'Content-Type: application/json' -d '{\"model\":\"qwen/qwen3.6-plus:free\",\"messages\":[{\"role\":\"user\",\"content\":\"Roast this crypto wallet in 50 words. End with DEGEN_SCORE: 42\"}],\"max_tokens\":700}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(taskkill /PID 11808 /F)",
+      "Bash(cmd /c \"taskkill /PID 11808 /F\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe /T\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
