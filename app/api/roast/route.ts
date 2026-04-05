@@ -13,8 +13,8 @@ const openai = new OpenAI({
 export async function POST(req: NextRequest) {
   const { wallet } = await req.json()
 
-  if (!wallet || typeof wallet !== 'string') {
-    return Response.json({ error: 'Missing wallet address' }, { status: 400 })
+  if (!wallet || typeof wallet !== 'string' || wallet.length < 32) {
+    return Response.json({ error: 'Invalid wallet address.' }, { status: 400 })
   }
 
   try {
@@ -28,28 +28,37 @@ export async function POST(req: NextRequest) {
     const solBalance = balanceData.status === 'fulfilled' ? balanceData.value : 0
     const isBagsCreator = bagsData.status === 'fulfilled' ? bagsData.value : false
 
+    console.log(`[roast] wallet=${wallet.slice(0,8)} txns=${transactions.length} sol=${solBalance}`)
+
     const context = buildWalletContext(wallet, transactions, solBalance, isBagsCreator)
-    const { roast, degenScore } = await generateRoast(context)
+    const { roast, degenScore } = await generateRoast(context, wallet)
 
     return Response.json({ roast, degenScore, context })
   } catch (err: any) {
-    console.error('Roast error:', err)
-    const msg = err?.message ?? ''
-    if (msg.includes('429') || msg.includes('rate') || msg.includes('Rate')) {
+    const msg: string = err?.message ?? String(err)
+    console.error('[roast] error:', msg)
+
+    if (msg.includes('429') || msg.toLowerCase().includes('rate')) {
       return Response.json(
-        { error: 'AI model is rate-limited right now. Wait 30s and try again.' },
+        { error: 'AI is rate-limited. Wait 30 seconds and try again.' },
         { status: 429 }
       )
     }
-    return Response.json({ error: 'Failed to generate roast. Try again.' }, { status: 500 })
+    // Return actual error in dev so we can debug
+    return Response.json(
+      { error: `Failed to generate roast: ${msg.slice(0, 200)}` },
+      { status: 500 }
+    )
   }
 }
 
 async function fetchHeliusTransactions(wallet: string) {
-  // Fetch all tx types — SWAP filter misses many degen wallets
   const url = `https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${process.env.HELIUS_API_KEY}&limit=50`
-  const res = await fetch(url)
-  if (!res.ok) return []
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
+  if (!res.ok) {
+    console.warn('[helius] non-ok:', res.status)
+    return []
+  }
   const data = await res.json()
   return Array.isArray(data) ? data : []
 }
@@ -58,25 +67,25 @@ async function fetchSolBalance(wallet: string): Promise<number> {
   const res = await fetch(process.env.HELIUS_RPC_URL!, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getBalance',
-      params: [wallet],
-    }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [wallet] }),
+    signal: AbortSignal.timeout(8000),
   })
   const data = await res.json()
   return (data?.result?.value ?? 0) / 1e9
 }
 
 async function fetchBagsCreatorData(wallet: string): Promise<boolean> {
-  const res = await fetch(
-    `${process.env.BAGS_API_BASE}/token-launch/creator/v3?wallet=${wallet}`,
-    { headers: { 'x-api-key': process.env.BAGS_API_KEY! } }
-  )
-  if (!res.ok) return false
-  const data = await res.json()
-  return data?.success && Array.isArray(data?.response) && data.response.length > 0
+  try {
+    const res = await fetch(
+      `${process.env.BAGS_API_BASE}/token-launch/creator/v3?wallet=${wallet}`,
+      { headers: { 'x-api-key': process.env.BAGS_API_KEY! }, signal: AbortSignal.timeout(8000) }
+    )
+    if (!res.ok) return false
+    const data = await res.json()
+    return data?.success && Array.isArray(data?.response) && data.response.length > 0
+  } catch {
+    return false
+  }
 }
 
 function buildWalletContext(
@@ -85,75 +94,81 @@ function buildWalletContext(
   solBalance: number,
   isBagsCreator: boolean
 ) {
-  const swaps = transactions.filter((tx: any) => tx.type === 'SWAP')
-  const totalSwaps = swaps.length
-  const txTypes = transactions.reduce((acc: Record<string, number>, tx: any) => {
-    acc[tx.type] = (acc[tx.type] ?? 0) + 1
-    return acc
-  }, {})
-
-  // Find tokens traded and rough P&L signals from all txns
+  const txTypes: Record<string, number> = {}
   const tokenCounts: Record<string, number> = {}
-  let totalBought = 0
-  let totalSold = 0
+  let totalSent = 0
+  let totalReceived = 0
 
   for (const tx of transactions) {
+    txTypes[tx.type] = (txTypes[tx.type] ?? 0) + 1
     for (const t of tx.tokenTransfers ?? []) {
-      const mint = t.mint ?? 'unknown'
+      const mint: string = t.mint ?? 'unknown'
       tokenCounts[mint] = (tokenCounts[mint] ?? 0) + 1
     }
     for (const t of tx.nativeTransfers ?? []) {
-      if (t.fromUserAccount === wallet) totalSold += t.amount / 1e9
-      if (t.toUserAccount === wallet) totalBought += t.amount / 1e9
+      if (t.fromUserAccount === wallet) totalSent += t.amount / 1e9
+      if (t.toUserAccount === wallet) totalReceived += t.amount / 1e9
     }
   }
 
   const topTokens = Object.entries(tokenCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([mint, count]) => `${mint.slice(0, 6)}...${mint.slice(-4)} (${count} trades)`)
-
-  const netPnl = totalBought - totalSold
+    .map(([mint, count]) => `${mint.slice(0, 8)}... (${count}x)`)
 
   return {
-    wallet: `${wallet.slice(0, 6)}...${wallet.slice(-4)}`,
+    walletShort: `${wallet.slice(0, 6)}...${wallet.slice(-4)}`,
     solBalance: solBalance.toFixed(3),
-    totalSwaps,
-    topTokens,
-    netSolFlow: netPnl.toFixed(3),
-    isBagsCreator,
     totalTx: transactions.length,
-    txTypes: JSON.stringify(txTypes),
+    totalSwaps: txTypes['SWAP'] ?? 0,
+    topTokens,
+    netSolFlow: (totalReceived - totalSent).toFixed(3),
+    isBagsCreator,
+    txBreakdown: Object.entries(txTypes).map(([k, v]) => `${k}:${v}`).join(', '),
   }
 }
 
-async function generateRoast(context: ReturnType<typeof buildWalletContext>) {
-  const prompt = `You are a brutally funny crypto roast comedian. You roast Solana wallets based on their onchain history. Be savage, specific, and funny. Reference the actual data. End with a "DEGEN SCORE" from 0-100 on its own line in this exact format: DEGEN_SCORE: <number>
+async function generateRoast(
+  ctx: ReturnType<typeof buildWalletContext>,
+  wallet: string
+) {
+  const prompt = `You are a brutally funny crypto roast comedian specializing in Solana degeneracy. Roast this wallet based on real onchain data. Be savage, specific, funny. Flowing prose only — no bullet points.
 
-Wallet data:
-- Address: ${context.wallet}
-- SOL Balance: ${context.solBalance} SOL
-- Total transactions: ${context.totalTx}
-- Total swaps analyzed: ${context.totalSwaps}
-- Most traded tokens: ${context.topTokens.join(', ') || 'none found'}
-- Net SOL flow from swaps: ${context.netSolFlow} SOL
-- Is Bags.fm creator: ${context.isBagsCreator ? 'YES — at least they did ONE smart thing' : 'NO'}
-- Transaction types breakdown: ${context.txTypes}
+Wallet: ${ctx.walletShort}
+SOL Balance: ${ctx.solBalance} SOL
+Total transactions: ${ctx.totalTx}
+Swaps: ${ctx.totalSwaps}
+Top tokens traded: ${ctx.topTokens.join(', ') || 'nothing (ngmi)'}
+Net SOL flow: ${ctx.netSolFlow} SOL
+Transaction types: ${ctx.txBreakdown || 'unknown'}
+Bags.fm creator: ${ctx.isBagsCreator ? 'YES (one smart move at least)' : 'NO'}
 
-Write a roast of 150-200 words. Be ruthless but funny. No bullet points — flowing prose like a stand-up set.`
+Write exactly 120-180 words. End your response with this line on its own: DEGEN_SCORE: <number 0-100>`
 
   const completion = await openai.chat.completions.create({
     model: 'qwen/qwen3.6-plus:free',
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 500,
+    max_tokens: 2000, // Qwen thinking model burns tokens on reasoning — needs headroom
   })
 
-  const text = completion.choices[0]?.message?.content ?? ''
+  const raw = completion.choices[0]?.message?.content ?? ''
+  console.log('[roast] raw response length:', raw.length)
 
-  // Parse degen score
-  const scoreMatch = text.match(/DEGEN_SCORE:\s*(\d+)/)
+  if (!raw) {
+    // Fallback if model returns empty
+    return fallbackRoast(ctx)
+  }
+
+  const scoreMatch = raw.match(/DEGEN_SCORE:\s*(\d+)/i)
   const degenScore = scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[1]))) : 42
-  const roast = text.replace(/DEGEN_SCORE:\s*\d+/g, '').trim()
+  const roast = raw.replace(/DEGEN_SCORE:\s*\d+/gi, '').trim()
 
-  return { roast, degenScore }
+  return { roast: roast || fallbackRoast(ctx).roast, degenScore }
+}
+
+function fallbackRoast(ctx: ReturnType<typeof buildWalletContext>) {
+  return {
+    roast: `Look at ${ctx.walletShort} over here with ${ctx.solBalance} SOL and ${ctx.totalTx} transactions of pure, uncut financial self-harm. ${ctx.totalSwaps} swaps and somehow still holding bags heavier than their life decisions. The net SOL flow of ${ctx.netSolFlow} SOL tells the whole story — in, out, and mostly gone. ${ctx.isBagsCreator ? 'At least they launched on Bags.fm — the one competent decision in this entire disaster.' : "Didn't even launch on Bags.fm — which is wild because even that would've been a smarter move than whatever this is."} Somewhere out there, a financial advisor is crying and they don't even know why. WAGMI? Nah fam. Not this wallet.`,
+    degenScore: Math.min(99, Math.max(10, ctx.totalTx)),
+  }
 }
