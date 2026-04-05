@@ -9,10 +9,14 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: 'BagsRoast — AI roasts your Solana wallet',
   description: 'Paste your wallet. AI clowns your entire trading history. Share it. Everyone laughs.',
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
   openGraph: {
     title: 'BagsRoast — AI roasts your Solana wallet',
     description: 'Paste your wallet. AI clowns your entire trading history.',
-    images: ['/api/og'],
+    images: [{ url: '/api/og', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',

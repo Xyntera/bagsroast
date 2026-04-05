@@ -11,16 +11,19 @@ type Props = {
 export default function ShareButton({ roast, degenScore, wallet }: Props) {
   const [copied, setCopied] = useState(false)
 
+  function shareUrl() {
+    return `${window.location.origin}/roast?wallet=${wallet}&score=${degenScore}`
+  }
+
   function handleShare() {
     const short = roast.slice(0, 180).trim()
-    const text = `I got a ${degenScore}/100 Degen Score on BagsRoast 🔥\n\n"${short}..."\n\nRoast your wallet:`
-    const url = `${window.location.origin}/roast?wallet=${wallet}`
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    const text = `I got ${degenScore}/100 on BagsRoast 🔥\n\n"${short}..."\n\nRoast your wallet:`
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl())}`
     window.open(twitterUrl, '_blank', 'noopener,noreferrer')
   }
 
   function handleCopy() {
-    const url = `${window.location.origin}/roast?wallet=${wallet}`
+    const url = shareUrl()
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)

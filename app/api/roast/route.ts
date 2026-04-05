@@ -132,18 +132,30 @@ async function generateRoast(
   ctx: ReturnType<typeof buildWalletContext>,
   wallet: string
 ) {
-  const prompt = `You are a brutally funny crypto roast comedian specializing in Solana degeneracy. Roast this wallet based on real onchain data. Be savage, specific, funny. Flowing prose only — no bullet points.
+  const prompt = `You are a brutally honest, dry-humor friend who just read someone's entire Solana transaction history. Deliver a verdict — not a performance. No theatrics, no bullet points, no list-style stat recaps.
 
 Wallet: ${ctx.walletShort}
 SOL Balance: ${ctx.solBalance} SOL
 Total transactions: ${ctx.totalTx}
 Swaps: ${ctx.totalSwaps}
-Top tokens traded: ${ctx.topTokens.join(', ') || 'nothing (ngmi)'}
-Net SOL flow: ${ctx.netSolFlow} SOL
-Transaction types: ${ctx.txBreakdown || 'unknown'}
-Bags.fm creator: ${ctx.isBagsCreator ? 'YES (one smart move at least)' : 'NO'}
+Most traded tokens: ${ctx.topTokens.join(', ') || 'nothing — pure SOL churn'}
+Net SOL flow: ${ctx.netSolFlow} SOL (negative = net loss)
+Transaction breakdown: ${ctx.txBreakdown || 'unknown'}
+Bags.fm creator: ${ctx.isBagsCreator ? 'YES' : 'NO'}
 
-Write exactly 120-180 words. End your response with this line on its own: DEGEN_SCORE: <number 0-100>`
+Context clues:
+- WSOL / So1111... in top tokens = swapping SOL for wrapped SOL and back — zero productive output
+- CLOSE_ACCOUNT transactions = closing empty token accounts after rugs
+- Negative net SOL flow = real money gone, not paper loss
+- No Bags.fm = missed one of the few Solana protocols that actually pays creators
+- Bags.fm creator = acknowledge it as the one competent move in an otherwise grim record
+
+Rules:
+- Open immediately with the most damning number — no "Congrats on", no "Ladies and gentlemen", no theatrical opener
+- 130-160 words, tight flowing prose, not a stat recitation
+- Shorten any token addresses to 6 chars max
+- End with one cold, original line that lands like a verdict — no clichés
+- The very last line must be exactly: DEGEN_SCORE: <number 0-100>`
 
   const completion = await openai.chat.completions.create({
     model: 'qwen/qwen3.6-plus:free',
