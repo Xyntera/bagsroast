@@ -43,6 +43,8 @@ npm install
 
 Create `.env.local` in the project root:
 
+- **.ENV**: [.env](https://github.com/Xyntera/bagsroast/blob/main/.env.local.example)
+
 ```env
 HELIUS_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
 HELIUS_API_KEY=YOUR_KEY
